@@ -12,8 +12,8 @@ sidexvfg
 使用时，确保你已安装了python最新版。
 ## 贡献
 制作人员：
-sidexvfg
-HanHanDeYaYa
+- sidexvfg
+- HanHanDeYaYa
 ## 加入我们
 我们欢迎以下类型的贡献：
 - 提交bug报告
