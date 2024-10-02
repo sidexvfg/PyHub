@@ -13,6 +13,7 @@ sidexvfg
 ## 贡献
 制作人员：
 sidexvfg
+HanHanDeYaYa
 ## 加入我们
 我们欢迎以下类型的贡献：
 - 提交bug报告
