@@ -1,6 +1,7 @@
 import sys
 import json
 import subprocess
+import webbrowser
 from PyQt5.QtGui import QIcon, QKeySequence
 from PyQt5.QtGui import QColor
 from PyQt5.QtGui import QFont
@@ -300,6 +301,82 @@ class FindReplaceDialog(QDialog):
         # 恢复光标位置
         self.editor.setCursorPosition(*current_pos)
 
+#主题切换
+class ThemeSwitcher(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Theme Switcher")  # 设置窗口标题
+        self.setGeometry(500, 300, 200, 100)  # 设置窗口大小和位置
+        # 创建主题列表
+        self.theme_list = QListWidget(self)
+        self.theme_list.addItems(["Default", "Dark", "Light"])
+
+        # 切换按钮
+        self.switch_button = QPushButton("Switch", self)
+        # 设置布局
+        layout = QVBoxLayout()
+        layout.addWidget(self.theme_list)
+        layout.addWidget(self.switch_button)
+        self.setLayout(layout)
+
+        # 切换按钮点击事件
+        self.switch_button.clicked.connect(self.apply_theme)
+
+    def apply_theme(self):
+        selected_theme = self.theme_list.currentItem().text()  # 获取当前选中的主题
+        if selected_theme == "Dark":
+            self.parent().setStyleSheet("background-color: #2E2E2E; color: white;")
+        elif selected_theme == "Light":
+            self.parent().setStyleSheet("background-color: white; color: black;")
+        else:
+            self.parent().setStyleSheet("""
+            QMainWindow {
+                background-color: #2E2E2E;
+                color: #FFFFFF;
+            }
+            QPushButton {
+                background-color: #007ACC;
+                color: #FFFFFF;
+                border-radius: 5px;
+                padding: 10px;
+            }
+            QPushButton:hover {
+                background-color: #005EA6;
+            }
+            QTextEdit {
+                background-color: #1E1E1E;
+                color: #D4D4D4;
+                border: 1px solid #444;
+            }
+            QListWidget {
+                background-color: #1E1E1E;
+                color: #D4D4D4;
+            }
+            QDockWidget {
+                background-color: #2E2E2E;
+            }
+            QLineEdit {
+                background-color: #1E1E1E;
+                color: #D4D4D4;
+                border: 1px solid #444;
+                padding: 5px;
+            }
+            QTabWidget::pane { /* The tab widget frame */
+                border-top: 2px solid #C2C7CB;
+            }
+            QTabBar::tab {
+                background: #2E2E2E;
+                color: white;
+                padding: 10px;
+                border: 1px solid #444;
+                border-bottom: none;
+            }
+            QTabBar::tab:selected {
+                background: #1E1E1E;
+                border-bottom: 2px solid #1E1E1E;
+            }
+        """)  # 默认样式
+        self.close()  # 关闭窗口
 
 # Python 编辑器主窗口类，继承自QMainWindow
 class PythonEditor(QMainWindow):
@@ -617,6 +694,7 @@ class PythonEditor(QMainWindow):
         open_action.setShortcut(QKeySequence("Ctrl+O"))
         file_menu.addAction(open_action)
 
+
         open_folder_action = QAction("Open Folder", self)
         open_folder_action.triggered.connect(self.prompt_open_folder)
         file_menu.addAction(open_folder_action)
@@ -640,12 +718,25 @@ class PythonEditor(QMainWindow):
         replace_action.triggered.connect(self.open_replace_dialog)
         replace_action.setShortcut(QKeySequence("Ctrl+H"))
         edit_menu.addAction(replace_action)
+        
+        #主题切换
+        documentation_action = QAction("topic", self)
+        documentation_action.triggered.connect(self.topic)
+        edit_menu.addAction(documentation_action)
+
+        #帮助文档
+        documentation_action = QAction("Help documentation", self)
+        documentation_action.triggered.connect(self.Help_documentation)
+        help_menu.addAction(documentation_action)
 
     # 弹出对话框让用户输入要注入的代码
     def prompt_inject_code(self):
         code, ok = QInputDialog.getText(self, "Inject Custom Code", "Enter your code:")
         if ok and code:
             self.inject_code(code)  # 进行代码注入
+
+        
+
     # 提示打开文件
     def prompt_open(self):
         file_path, _ = QFileDialog.getOpenFileName(
@@ -707,12 +798,26 @@ class PythonEditor(QMainWindow):
         if isinstance(current_tab, QsciScintilla):
             self.replace_dialog = FindReplaceDialog(current_tab, self)
             self.replace_dialog.show()
+
     # 弹出对话框让用户输入要注入的代码
     def prompt_inject_code(self):
         code, ok = QInputDialog.getText(self, "Inject Custom Code", "Enter your code:")
         if ok and code:
             self.inject_code(code)  # 注入用户输入的代码
     
+
+
+    # 帮助文档
+    def Help_documentation(self):
+        webbrowser.open("https://e0ds3o5azc.feishu.cn/docx/TyozdBek4oTnZvxJFqQceG3vnxb?from=from_copylink")
+
+    # 主题切换
+    def topic(self):
+        current_tab = self.tabs.currentWidget()
+        if isinstance(current_tab, QsciScintilla):
+            self.theme_switcher = ThemeSwitcher(self)
+            self.theme_switcher.show()
+
 
 if __name__ == "__main__":
     import os
