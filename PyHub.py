@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.Qsci import QsciScintilla, QsciLexerPython
 from PyQt5.QtCore import Qt, QProcess, QTimer
-
+import requests 
 
 # 文件浏览器类，继承自QDockWidget，用户可以通过它浏览当前目录中的Python文件
 class FileBrowser(QDockWidget):
@@ -466,17 +466,20 @@ class PythonEditor(QMainWindow):
 
     # 运行当前代码
     def run_code(self):
-        current_tab = self.tabs.currentWidget()  # 获取当前标签页
+        current_tab = self.tabs.currentWidget()
         if isinstance(current_tab, QsciScintilla):
-            code = current_tab.text()  # 获取代码文本
-            with open('temp_script.py', 'w', encoding='utf-8') as script_file:
+            code = current_tab.text()
+            temp_file_path = 'temp_script.py'  # 临时文件路径
+            with open(temp_file_path, 'w', encoding='utf-8') as script_file:
                 script_file.write(code)  # 将代码保存到临时文件中
 
             self.stop_button.setVisible(True)  # 显示停止按钮
             self.statusBar().showMessage("Code is running...")  # 更新状态栏信息
 
             # 使用QProcess运行Python脚本
-            self.process.start('python', ['temp_script.py'])
+            self.process.start('python', [temp_file_path])
+            
+            
 
     # 停止正在运行的代码
     def stop_code(self):
@@ -489,18 +492,47 @@ class PythonEditor(QMainWindow):
     # 处理标准输出
     def handle_stdout(self):
         data = self.process.readAllStandardOutput()
-        self.console_output.append(str(data, encoding='utf-8'))  # 将标准输出添加到控制台
+        decoded_data = str(data, encoding='utf-8')  # 将标准输出添加到控制台
+        self.console_output.append(decoded_data.strip()) 
 
     # 处理标准错误
     def handle_stderr(self):
-        data = self.process.readAllStandardError()
-        self.console_output.append(str(data, encoding='utf-8'))  # 将错误输出添加到控制台
+        data = self.process.readAllStandardError()  # 获取标准错误
+        try:
+            decoded_data = str(data, encoding='utf-8')
+        except UnicodeDecodeError:
+            decoded_data = str(data, encoding='latin-1')  # 处理解码错误
+
+        self.console_output.append(decoded_data.strip())  # 去除前后空白字符并添加到控制台
 
     # 进程完成后调用
     def process_finished(self):
         self.stop_button.setVisible(False)  # 隐藏停止按钮
         self.statusBar().showMessage("Code execution finished.")  # 更新状态栏信息
+    
+    # 弹出对话框让用户输入远程代码的URL
+    def prompt_inject_code_from_url(self):
+        url, ok = QInputDialog.getText(self, "Inject Code from URL", "Enter the URL:")
+        if ok and url:
+            self.inject_code_from_url(url)  # 调用新方法从URL注入代码
 
+    # 从URL获取并注入代码
+    def inject_code_from_url(self, url):
+        try:
+            response = requests.get(url)  # 发起GET请求获取代码
+            response.raise_for_status()  # 检查请求是否成功
+            code = response.text  # 获取返回的代码文本
+
+            # 检查是否为空
+            if not code.strip():
+                QMessageBox.warning(self, "Warning", "No code to inject from URL.")
+                return
+
+            # 将获取的代码注入
+            self.inject_code(code)
+
+        except requests.exceptions.RequestException as e:
+            QMessageBox.critical(self, "Error", f"Failed to fetch code from {url}:\n{e}")    
     # 自动保存当前文件
     def auto_save(self):
         current_tab = self.tabs.currentWidget()  # 获取当前标签页
@@ -629,6 +661,9 @@ class PythonEditor(QMainWindow):
         open_action.setShortcut(QKeySequence("Ctrl+O"))
         file_menu.addAction(open_action)
 
+        # 添加从URL注入代码的动作
+        
+
         # 打开文件夹动作
         open_folder_action = QAction("Open Folder", self)
         open_folder_action.triggered.connect(self.prompt_open_folder)
@@ -644,6 +679,11 @@ class PythonEditor(QMainWindow):
         inject_action = QAction("Inject Code", self)
         inject_action.triggered.connect(self.prompt_inject_code)  # 设置注入代码对话框
         edit_menu.addAction(inject_action)
+
+        # 从URL注入代码动作
+        inject_code_url_action = QAction("Inject Code from URL", self)
+        inject_code_url_action.triggered.connect(self.prompt_inject_code_from_url)  # 设定触发的方法
+        edit_menu.addAction(inject_code_url_action)
 
         # 查找和替换动作
         find_action = QAction("Find", self)
@@ -662,11 +702,14 @@ class PythonEditor(QMainWindow):
             return
         
         # 创建一个临时文件来保存注入的代码
-        with open('injected_code.py', 'w', encoding='utf-8') as inject_file:
+        temp_file_path = 'injected_code.py'  # 临时文件路径
+        with open(temp_file_path, 'w', encoding='utf-8') as inject_file:
             inject_file.write(code)
 
         # 使用QProcess执行注入的代码
-        self.process.start('python', ['injected_code.py'])
+        self.process.start('python', [temp_file_path])
+
+
 
     # 运行当前代码的方法，决定是否允许用户注入代码
     def run_code(self):
@@ -683,52 +726,7 @@ class PythonEditor(QMainWindow):
 
             self.process.start('python', ['temp_script.py'])
 
-    def create_menu(self):
-        menu_bar = self.menuBar()
-        file_menu = menu_bar.addMenu("File")
-        edit_menu = menu_bar.addMenu("Edit")
-        help_menu = menu_bar.addMenu("Help")
-
-        open_action = QAction("Open File", self)
-        open_action.triggered.connect(self.prompt_open)
-        open_action.setShortcut(QKeySequence("Ctrl+O"))
-        file_menu.addAction(open_action)
-
-
-        open_folder_action = QAction("Open Folder", self)
-        open_folder_action.triggered.connect(self.prompt_open_folder)
-        file_menu.addAction(open_folder_action)
-
-        save_action = QAction("Save", self)
-        save_action.triggered.connect(self.save_file)
-        save_action.setShortcut(QKeySequence("Ctrl+S"))
-        file_menu.addAction(save_action)
-
-        # 注入代码动作
-        inject_action = QAction("Inject Code", self)
-        inject_action.triggered.connect(self.prompt_inject_code)  # 设定触发注入的方法
-        edit_menu.addAction(inject_action)
-
-        find_action = QAction("Find", self)
-        find_action.triggered.connect(self.open_find_dialog)
-        find_action.setShortcut(QKeySequence("Ctrl+F"))
-        edit_menu.addAction(find_action)
-
-        replace_action = QAction("Replace", self)
-        replace_action.triggered.connect(self.open_replace_dialog)
-        replace_action.setShortcut(QKeySequence("Ctrl+H"))
-        edit_menu.addAction(replace_action)
-        
-        #主题切换
-        documentation_action = QAction("topic", self)
-        documentation_action.triggered.connect(self.topic)
-        edit_menu.addAction(documentation_action)
-
-        #帮助文档
-        documentation_action = QAction("Help documentation", self)
-        documentation_action.triggered.connect(self.Help_documentation)
-        help_menu.addAction(documentation_action)
-
+    
     # 弹出对话框让用户输入要注入的代码
     def prompt_inject_code(self):
         code, ok = QInputDialog.getText(self, "Inject Custom Code", "Enter your code:")
