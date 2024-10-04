@@ -639,6 +639,11 @@ class PythonEditor(QMainWindow):
         save_action.triggered.connect(self.save_file)
         save_action.setShortcut(QKeySequence("Ctrl+S"))
         file_menu.addAction(save_action)
+        
+        # 注入代码动作
+        inject_action = QAction("Inject Code", self)
+        inject_action.triggered.connect(self.prompt_inject_code)  # 设置注入代码对话框
+        edit_menu.addAction(inject_action)
 
         # 查找和替换动作
         find_action = QAction("Find", self)
@@ -650,7 +655,70 @@ class PythonEditor(QMainWindow):
         replace_action.triggered.connect(self.open_replace_dialog)
         replace_action.setShortcut(QKeySequence("Ctrl+H"))
         edit_menu.addAction(replace_action)
+    def inject_code(self, code):
+        # 检查是否为空
+        if not code.strip():
+            QMessageBox.warning(self, "Warning", "No code to inject.")
+            return
+        
+        # 创建一个临时文件来保存注入的代码
+        with open('injected_code.py', 'w', encoding='utf-8') as inject_file:
+            inject_file.write(code)
 
+        # 使用QProcess执行注入的代码
+        self.process.start('python', ['injected_code.py'])
+
+    # 运行当前代码的方法，决定是否允许用户注入代码
+    def run_code(self):
+        current_tab = self.tabs.currentWidget()
+        if isinstance(current_tab, QsciScintilla):
+            code = current_tab.text()
+            # 这里可以选择是否运行当前代码或仅执行注入代码
+
+            with open('temp_script.py', 'w', encoding='utf-8') as script_file:
+                script_file.write(code)
+
+            self.stop_button.setVisible(True)
+            self.statusBar().showMessage("Code is running...")
+
+            self.process.start('python', ['temp_script.py'])
+
+    def create_menu(self):
+        menu_bar = self.menuBar()
+        file_menu = menu_bar.addMenu("File")
+        edit_menu = menu_bar.addMenu("Edit")
+        help_menu = menu_bar.addMenu("Help")
+
+        open_action = QAction("Open File", self)
+        open_action.triggered.connect(self.prompt_open)
+        open_action.setShortcut(QKeySequence("Ctrl+O"))
+        file_menu.addAction(open_action)
+
+
+        open_folder_action = QAction("Open Folder", self)
+        open_folder_action.triggered.connect(self.prompt_open_folder)
+        file_menu.addAction(open_folder_action)
+
+        save_action = QAction("Save", self)
+        save_action.triggered.connect(self.save_file)
+        save_action.setShortcut(QKeySequence("Ctrl+S"))
+        file_menu.addAction(save_action)
+
+        # 注入代码动作
+        inject_action = QAction("Inject Code", self)
+        inject_action.triggered.connect(self.prompt_inject_code)  # 设定触发注入的方法
+        edit_menu.addAction(inject_action)
+
+        find_action = QAction("Find", self)
+        find_action.triggered.connect(self.open_find_dialog)
+        find_action.setShortcut(QKeySequence("Ctrl+F"))
+        edit_menu.addAction(find_action)
+
+        replace_action = QAction("Replace", self)
+        replace_action.triggered.connect(self.open_replace_dialog)
+        replace_action.setShortcut(QKeySequence("Ctrl+H"))
+        edit_menu.addAction(replace_action)
+        
         #主题切换
         documentation_action = QAction("topic", self)
         documentation_action.triggered.connect(self.topic)
@@ -660,6 +728,14 @@ class PythonEditor(QMainWindow):
         documentation_action = QAction("Help documentation", self)
         documentation_action.triggered.connect(self.Help_documentation)
         help_menu.addAction(documentation_action)
+
+    # 弹出对话框让用户输入要注入的代码
+    def prompt_inject_code(self):
+        code, ok = QInputDialog.getText(self, "Inject Custom Code", "Enter your code:")
+        if ok and code:
+            self.inject_code(code)  # 进行代码注入
+
+        
 
     # 提示打开文件
     def prompt_open(self):
@@ -723,6 +799,14 @@ class PythonEditor(QMainWindow):
             self.replace_dialog = FindReplaceDialog(current_tab, self)
             self.replace_dialog.show()
 
+    # 弹出对话框让用户输入要注入的代码
+    def prompt_inject_code(self):
+        code, ok = QInputDialog.getText(self, "Inject Custom Code", "Enter your code:")
+        if ok and code:
+            self.inject_code(code)  # 注入用户输入的代码
+    
+
+
     # 帮助文档
     def Help_documentation(self):
         webbrowser.open("https://e0ds3o5azc.feishu.cn/docx/TyozdBek4oTnZvxJFqQceG3vnxb?from=from_copylink")
@@ -733,6 +817,7 @@ class PythonEditor(QMainWindow):
         if isinstance(current_tab, QsciScintilla):
             self.theme_switcher = ThemeSwitcher(self)
             self.theme_switcher.show()
+
 
 if __name__ == "__main__":
     import os
