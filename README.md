@@ -14,6 +14,8 @@ python轻量编辑器
 制作人员：
 - sidexvfg
 - HanHanDeYaYa
+- Displaysbook
+- 多BUG的哮天犬
 ## 加入我们
 我们欢迎以下类型的贡献：
 - 提交bug报告
